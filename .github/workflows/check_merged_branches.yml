@@ -1,0 +1,31 @@
+name: Check Merged Branches
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs every hour
+
+jobs:
+  delete_merged_branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          
+      - name: Check merged branches
+        run: |
+          git fetch --all
+          UPSTREAM_REPO=$(git remote -v | grep "upstream" | head -n 1 | awk '{print $2}')
+          if [ -z "$UPSTREAM_REPO" ]; then
+            git remote add upstream $(git remote -v | grep "origin.*(fetch)" | awk '{print $2}' | sed "s/${{ github.repository_owner }}//g" | sed "s/${{ github.repository }}//g" | xargs -I {} echo "https://github.com/{}${{ github.repository }}.git")
+            git fetch upstream
+          fi
+          git checkout master
+          git pull upstream master
+          for branch in $(git branch | sed /\*/d); do
+            if git merge-base --is-ancestor $branch master; then
+              echo "Branch $branch has been merged to upstream master"
+              git push --delete origin $branch
+            fi
+          done
