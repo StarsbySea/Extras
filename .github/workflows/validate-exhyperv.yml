@@ -18,20 +18,23 @@ jobs:
       - name: Checkout bucket
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install Scoop
+      - name: Install Scoop and test bucket
         shell: pwsh
         run: |
           Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
           Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
           scoop config scoop_branch develop
           scoop update scoop
-          scoop bucket add exhyperv-test "$env:GITHUB_WORKSPACE"
+          scoop bucket add exhyperv-test https://github.com/StarsbySea/Extras.git
+          $bucketDir = Join-Path $env:USERPROFILE 'scoop\buckets\exhyperv-test'
+          git -C $bucketDir fetch origin fix-exhyperv-1.5.1
+          git -C $bucketDir checkout -B fix-exhyperv-1.5.1 origin/fix-exhyperv-1.5.1
 
       - name: Validate checkver
         shell: pwsh
         run: |
           $checkver = Join-Path $env:USERPROFILE 'scoop\apps\scoop\current\bin\checkver.ps1'
-          & $checkver (Join-Path $env:GITHUB_WORKSPACE 'bucket\exhyperv.json') -ThrowError
+          & $checkver (Join-Path $env:USERPROFILE 'scoop\buckets\exhyperv-test\bucket\exhyperv.json') -ThrowError
           if ($LASTEXITCODE -ne 0) { throw "checkver failed with exit code $LASTEXITCODE" }
 
       - name: Download and verify hash
