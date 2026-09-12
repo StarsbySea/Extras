@@ -1,0 +1,61 @@
+name: Validate ExHyperV
+
+on:
+  push:
+    branches:
+      - fix-exhyperv-1.5.1
+    paths:
+      - .github/workflows/validate-exhyperv.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout bucket
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Scoop
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+          scoop config scoop_branch develop
+          scoop update scoop
+          scoop bucket add exhyperv-test "$env:GITHUB_WORKSPACE"
+
+      - name: Validate checkver
+        shell: pwsh
+        run: |
+          $checkver = Join-Path $env:USERPROFILE 'scoop\apps\scoop\current\bin\checkver.ps1'
+          & $checkver (Join-Path $env:GITHUB_WORKSPACE 'bucket\exhyperv.json') -ThrowError
+          if ($LASTEXITCODE -ne 0) { throw "checkver failed with exit code $LASTEXITCODE" }
+
+      - name: Download and verify hash
+        shell: pwsh
+        run: |
+          scoop download exhyperv-test/exhyperv
+          if ($LASTEXITCODE -ne 0) { throw "scoop download failed with exit code $LASTEXITCODE" }
+
+      - name: Install and verify portable executable
+        shell: pwsh
+        run: |
+          scoop install exhyperv-test/exhyperv
+          if ($LASTEXITCODE -ne 0) { throw "scoop install failed with exit code $LASTEXITCODE" }
+          $prefix = (scoop prefix exhyperv).Trim()
+          $exe = Join-Path $prefix 'ExHyperV.exe'
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Expected executable not found: $exe" }
+          $actual = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $expected = '0524c61e4299207c9ebb39314e4fbff151c3d303e616896819eed4826536ea44'
+          if ($actual -ne $expected) { throw "Installed executable hash mismatch: $actual" }
+
+      - name: Uninstall
+        shell: pwsh
+        run: |
+          scoop uninstall exhyperv
+          if ($LASTEXITCODE -ne 0) { throw "scoop uninstall failed with exit code $LASTEXITCODE" }
+          $appDir = Join-Path $env:USERPROFILE 'scoop\apps\exhyperv'
+          if (Test-Path -LiteralPath $appDir) { throw "Application directory still exists after uninstall: $appDir" }
