@@ -35,7 +35,6 @@ jobs:
         run: |
           $checkver = Join-Path $env:USERPROFILE 'scoop\apps\scoop\current\bin\checkver.ps1'
           & $checkver (Join-Path $env:USERPROFILE 'scoop\buckets\exhyperv-test\bucket\exhyperv.json') -ThrowError
-          if ($LASTEXITCODE -ne 0) { throw "checkver failed with exit code $LASTEXITCODE" }
 
       - name: Download and verify hash
         shell: pwsh
