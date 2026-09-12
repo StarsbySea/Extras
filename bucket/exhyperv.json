@@ -16,18 +16,12 @@
             "hash": "b82af91a393bd6b36b5328aab38bb99221388b483c62811dea9c5ece95425d72"
         }
     },
-    "pre_install": [
-        "if (-not (Test-Path -LiteralPath \"$persist_dir\\Config.xml\" -PathType Leaf)) {",
-        "    Set-Content -Path \"$dir\\Config.xml\" -Value '<?xml version=\"1.0\" encoding=\"utf-8\"?><Config/>' -Encoding UTF8",
-        "}"
-    ],
     "shortcuts": [
         [
             "ExHyperV.exe",
             "ExHyperV"
         ]
     ],
-    "persist": "Config.xml",
     "checkver": {
         "github": "https://api.github.com/repos/Justsenger/ExHyperV/releases",
         "jsonpath": "$[?(@.tag_name =~ /^v?[\\d.]+$/i)].tag_name",
